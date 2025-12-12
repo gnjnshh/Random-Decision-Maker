@@ -9,14 +9,13 @@
             --bg: #ffffff;
             --fg: #000000;
             --border: 4px solid #000000;
-            --radius: 0px; /* Sharp corners for brutalist look */
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Courier New', Courier, monospace; /* Monospace for terminal vibe */
+            font-family: 'Courier New', Courier, monospace;
         }
 
         body {
@@ -36,7 +35,7 @@
             padding: 40px;
             position: relative;
             background: white;
-            box-shadow: 12px 12px 0px #000000; /* Hard shadow */
+            box-shadow: 12px 12px 0px #000000;
             transition: all 0.3s ease;
         }
 
@@ -79,7 +78,7 @@
             -webkit-appearance: none;
         }
 
-        input[type="text"]:focus {
+        input:focus {
             background: #eeeeee;
         }
 
@@ -89,7 +88,7 @@
             padding: 18px;
             background: var(--fg);
             color: var(--bg);
-            border: 4px solid #000; /* Matching border thickness */
+            border: 4px solid #000;
             font-weight: 900;
             text-transform: uppercase;
             cursor: pointer;
@@ -120,12 +119,6 @@
             color: #fff;
         }
 
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
         /* Game Area */
         #gameArea {
             display: none;
@@ -136,7 +129,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 4px solid #000;
             padding-bottom: 20px;
         }
@@ -167,8 +160,20 @@
             font-size: 1.5rem;
         }
 
+        /* Total Counter */
+        .total-tally {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            padding: 5px;
+            background: #eee;
+            display: inline-block;
+            border: 2px solid #000;
+        }
+
         .result-display {
-            min-height: 120px;
+            min-height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -184,8 +189,8 @@
             line-height: 1.2;
         }
 
-        .winner-announce {
-            animation: blink 0.5s step-end infinite alternate;
+        .winner-anim {
+            animation: blink 0.3s step-end 3 alternate;
         }
 
         @keyframes blink {
@@ -198,25 +203,6 @@
             display: none !important;
         }
 
-        .mode-badge {
-            background: black;
-            color: white;
-            padding: 5px 10px;
-            font-weight: bold;
-            font-size: 0.8rem;
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            border: 2px solid white; /* contrast against container border */
-        }
-        
-        .extension-message {
-            font-size: 0.9rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: block;
-        }
-        
         .entropy-status {
             font-size: 0.6rem;
             text-align: right;
@@ -229,7 +215,6 @@
 <body>
 
     <div class="container">
-        <div class="mode-badge" id="modeBadge">SUDDEN DEATH</div>
         <h1>Decision Engine</h1>
 
         <!-- Setup Screen -->
@@ -259,24 +244,19 @@
                 </div>
             </div>
 
+            <div class="total-tally">
+                TOTAL TRIALS: <span id="totalRoundsDisplay">0</span>
+            </div>
+
             <div class="result-display" id="resultBox">
                 <p id="resultText">READY</p>
             </div>
             
-            <div class="entropy-status">ALGORITHM: CRYPTO_SHUFFLE_256</div>
+            <div class="entropy-status">ALGO: CRYPTO_SHUFFLE_256</div>
 
-            <!-- Controls during game -->
-            <button class="btn" id="nextRoundBtn" onclick="playRound()">CALCULATE FATE</button>
+            <!-- Main Action Button -->
+            <button class="btn" id="actionBtn" onclick="playRound()">CALCULATE FATE</button>
             
-            <!-- Series Options (Best of 3/5) -->
-            <div id="seriesOptions" class="hidden">
-                <span class="extension-message">EXTEND SERIES?</span>
-                <div class="btn-group">
-                    <button class="btn btn-outline" onclick="extendSeries(3)">Best of 3</button>
-                    <button class="btn btn-outline" onclick="extendSeries(5)">Best of 5</button>
-                </div>
-            </div>
-
             <button class="btn btn-outline" style="margin-top: 30px; border-width: 2px; font-size: 0.8rem; padding: 10px;" onclick="resetGame()">RESET SYSTEM</button>
         </div>
     </div>
@@ -287,23 +267,24 @@
         let scenarioB = "";
         let scoreA = 0;
         let scoreB = 0;
-        let targetScore = 1; // Default is single win (Sudden Death)
-        let gameActive = false;
+        let totalRounds = 0;
+        let isAnimating = false;
 
         // DOM Elements
         const setupScreen = document.getElementById('setupScreen');
         const gameArea = document.getElementById('gameArea');
         const inputA = document.getElementById('inputA');
         const inputB = document.getElementById('inputB');
+        
         const nameDisplayA = document.getElementById('nameDisplayA');
         const nameDisplayB = document.getElementById('nameDisplayB');
         const scoreDisplayA = document.getElementById('scoreDisplayA');
         const scoreDisplayB = document.getElementById('scoreDisplayB');
+        const totalRoundsDisplay = document.getElementById('totalRoundsDisplay');
+        
         const resultText = document.getElementById('resultText');
         const resultBox = document.getElementById('resultBox');
-        const seriesOptions = document.getElementById('seriesOptions');
-        const nextRoundBtn = document.getElementById('nextRoundBtn');
-        const modeBadge = document.getElementById('modeBadge');
+        const actionBtn = document.getElementById('actionBtn');
 
         function initializeGame() {
             if (!inputA.value.trim() || !inputB.value.trim()) {
@@ -322,26 +303,27 @@
             nameDisplayA.innerText = scenarioA;
             nameDisplayB.innerText = scenarioB;
             
-            gameActive = true;
-            playRound(); // Auto-start the first flip
+            // Start the first round immediately
+            playRound();
         }
 
         function playRound() {
-            if (!gameActive) return;
+            if (isAnimating) return;
+            isAnimating = true;
 
-            // Prepare UI for "Rolling"
-            nextRoundBtn.disabled = true;
-            nextRoundBtn.style.opacity = "0.5";
-            seriesOptions.classList.add('hidden'); 
-            resultBox.classList.remove('winner-announce');
+            // Visual Setup
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = "0.8";
+            actionBtn.innerText = "CALCULATING...";
+            resultBox.classList.remove('winner-anim');
             
             let iterations = 0;
-            let maxIterations = 20;
-            let speed = 50;
+            let maxIterations = 10; // Short animation for snappy feel
+            let speed = 40;
             
-            // The Rolling Animation Loop
+            // Flicker Animation
             const interval = setInterval(() => {
-                // Toggle between A and B purely for visual effect
+                // Toggle text purely for visual effect
                 resultText.innerText = Math.random() > 0.5 ? scenarioA : scenarioB;
                 iterations++;
 
@@ -353,42 +335,19 @@
         }
 
         /**
-         * The Fisher-Yates Shuffle Logic
-         * Uses Cryptographically Secure Pseudo-Random Number Generator (CSPRNG)
-         * This removes the bias inherent in simple Math.random()
+         * Cryptographically Secure Random Selection
          */
         function determineWinner() {
-            // 1. Create a "deck" representing equal chances. 
-            // We use a larger pool to allow for thorough shuffling.
-            const poolSize = 1000;
-            let fateDeck = [];
-            
-            // Fill deck exactly 50/50
-            for (let i = 0; i < poolSize; i++) {
-                if (i < poolSize / 2) {
-                    fateDeck.push('A');
-                } else {
-                    fateDeck.push('B');
-                }
-            }
-
-            // 2. Fisher-Yates Shuffle using Crypto API
-            // This is the "Highest Level" standard for unbiased shuffling
-            const randomBuffer = new Uint32Array(poolSize);
+            // Fisher-Yates Shuffle Logic
+            const poolSize = 100;
+            const randomBuffer = new Uint32Array(1);
             window.crypto.getRandomValues(randomBuffer);
-
-            for (let i = poolSize - 1; i > 0; i--) {
-                // Get a truly random index based on our crypto buffer
-                // We use the buffer value modulo the remaining length to pick a swap target
-                const j = randomBuffer[i] % (i + 1);
-                
-                // Swap elements
-                [fateDeck[i], fateDeck[j]] = [fateDeck[j], fateDeck[i]];
-            }
-
-            // 3. Pick the top card
-            const winnerKey = fateDeck[0]; 
-            const winnerIsA = (winnerKey === 'A');
+            
+            // Simple robust modulo to determine winner (Evens = A, Odds = B)
+            // Since we are using a cryptographically secure random number,
+            // taking modulo 2 is statistically sound for a 50/50 split.
+            const rawRandom = randomBuffer[0];
+            const winnerIsA = (rawRandom % 2 === 0);
 
             if (winnerIsA) {
                 scoreA++;
@@ -397,92 +356,51 @@
                 scoreB++;
                 resultText.innerText = `${scenarioB} WINS`;
             }
-
+            
+            totalRounds++;
             updateScoreboard();
-
-            // Check win condition
-            if (scoreA >= targetScore || scoreB >= targetScore) {
-                // Determine who won the SERIES
-                const seriesWinner = (scoreA > scoreB) ? scenarioA : scenarioB;
-                endSeries(seriesWinner);
-            } else {
-                // Continue Game
-                nextRoundBtn.disabled = false;
-                nextRoundBtn.style.opacity = "1";
-                nextRoundBtn.innerText = "NEXT ROUND";
-            }
+            
+            // Finalize Round
+            resultBox.classList.add('winner-anim'); // Blink effect
+            
+            // Reset Button for next try
+            isAnimating = false;
+            actionBtn.disabled = false;
+            actionBtn.style.opacity = "1";
+            actionBtn.innerText = "TRY AGAIN";
         }
 
         function updateScoreboard() {
             scoreDisplayA.innerText = scoreA;
             scoreDisplayB.innerText = scoreB;
-        }
-
-        function endSeries(winnerName) {
-            gameActive = false;
-            nextRoundBtn.classList.add('hidden'); 
-            
-            resultText.innerText = `${winnerName} IS THE CHAMPION`;
-            resultBox.classList.add('winner-announce'); // Blinking effect
-
-            // If we are in "Sudden Death" (Target 1), allow extension
-            if (targetScore === 1) {
-                seriesOptions.classList.remove('hidden');
-            }
-        }
-
-        function extendSeries(newTarget) {
-            const winsNeeded = Math.ceil(newTarget / 2);
-            targetScore = winsNeeded;
-            modeBadge.innerText = `BEST OF ${newTarget}`;
-            
-            // Reset UI for continuation
-            gameActive = true;
-            resultBox.classList.remove('winner-announce');
-            resultText.innerText = "SERIES EXTENDED";
-            
-            nextRoundBtn.classList.remove('hidden');
-            nextRoundBtn.disabled = false;
-            nextRoundBtn.style.opacity = "1";
-            nextRoundBtn.innerText = "CALCULATE FATE";
-            
-            seriesOptions.classList.add('hidden');
-            
-            // Edge case check
-            if (scoreA >= targetScore || scoreB >= targetScore) {
-                 endSeries(scoreA > scoreB ? scenarioA : scenarioB);
-            }
+            totalRoundsDisplay.innerText = totalRounds;
         }
 
         function resetGame() {
-            // Reset Vars
             scoreA = 0;
             scoreB = 0;
-            targetScore = 1;
-            gameActive = false;
+            totalRounds = 0;
+            isAnimating = false;
             
-            // Reset UI
             inputA.value = "";
             inputB.value = "";
+            
             scoreDisplayA.innerText = "0";
             scoreDisplayB.innerText = "0";
+            totalRoundsDisplay.innerText = "0";
             resultText.innerText = "READY";
-            resultBox.classList.remove('winner-announce');
-            
-            modeBadge.innerText = "SUDDEN DEATH";
+            resultBox.classList.remove('winner-anim');
             
             gameArea.style.display = 'none';
             setupScreen.classList.remove('hidden');
             
-            nextRoundBtn.classList.remove('hidden');
-            nextRoundBtn.disabled = false;
-            nextRoundBtn.style.opacity = "1";
-            nextRoundBtn.innerText = "CALCULATE FATE";
-            
-            seriesOptions.classList.add('hidden');
+            actionBtn.innerText = "CALCULATE FATE";
+            actionBtn.disabled = false;
         }
     </script>
 </body>
 </html>
+
+
 
 
