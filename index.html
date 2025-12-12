@@ -269,7 +269,7 @@
             <button class="btn" id="nextRoundBtn" onclick="playRound()">CALCULATE FATE</button>
             
             <!-- Go Again Button -->
-            <button class="btn" id="goAgainBtn" onclick="restartSeries()" style="display: none;">GO AGAIN</button>
+            <button class="btn hidden" id="goAgainBtn" onclick="restartSeries()">GO AGAIN</button>
             
             <!-- Series Options (Best of 3/5) -->
             <div id="seriesOptions" class="hidden">
@@ -430,7 +430,7 @@
             resultBox.classList.add('winner-announce'); // Blinking effect
 
             // Show "Go Again" button
-            goAgainBtn.style.display = 'block';
+            goAgainBtn.classList.remove('hidden');
 
             // If we are in "Sudden Death" (Target 1), allow extension
             if (targetScore === 1) {
@@ -474,7 +474,7 @@
             resultBox.classList.remove('winner-announce');
             
             // Hide "Go Again" button
-            goAgainBtn.style.display = 'none';
+            goAgainBtn.classList.add('hidden');
             
             // Hide series options if visible
             seriesOptions.classList.add('hidden');
@@ -513,7 +513,7 @@
             nextRoundBtn.innerText = "CALCULATE FATE";
             
             seriesOptions.classList.add('hidden');
-            goAgainBtn.style.display = 'none';
+            goAgainBtn.classList.add('hidden');
         }
     </script>
 </body>
